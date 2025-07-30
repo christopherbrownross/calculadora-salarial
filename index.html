@@ -308,7 +308,7 @@
                 }
             }
             
-            const totalDeducciones = salud + pension + fondoSolidaridad + retencionFuente + medicinaDeducible + seguroDeducible + esppAhorroMensual;
+            const totalDeducciones = salud + pension + fondoSolidaridad + retencionFuente + medicinaDeducible + seguroDeducible;
             const salarioNetoFinal = totalIngresosMensuales + compensacionesTotales + rsusMensuales + esppBeneficioMensual - totalDeducciones;
 
             const formatNumber = (value) => {
@@ -612,7 +612,7 @@
                                                 <div className="espp-breakdown">
                                                     <div className="detail-item">
                                                         <span>Ahorro mensual</span>
-                                                        <span className="value">-{formatCurrency(esppAhorroMensual)}</span>
+                                                        <span className="value neutral">-{formatCurrency(esppAhorroMensual)}</span>
                                                     </div>
                                                     <div className="detail-item">
                                                         <span>Beneficio mensual (15% descuento)</span>
@@ -624,7 +624,8 @@
                                                     </div>
                                                 </div>
                                                 <div className="espp-info">
-                                                    <small>💡 El 15% de descuento es gravable y se incluye en el cálculo de retención</small>
+                                                    <small>💡 Solo el beneficio del 15% se incluye como ingreso gravable para retención</small>
+                                                    <small>📝 El ahorro no es una deducción, es dinero que se aparta para comprar acciones</small>
                                                 </div>
                                             </div>
                                         )}
@@ -697,12 +698,6 @@
                                             <span>Retención Fuente</span>
                                             <span>-{formatCurrency(retencionFuente)}</span>
                                         </div>
-                                        {esppEnabled && (
-                                            <div className="deduction-item">
-                                                <span>Ahorro ESPP ({esppPercentage}%)</span>
-                                                <span>-{formatCurrency(esppAhorroMensual)}</span>
-                                            </div>
-                                        )}
                                         <div className="deduction-item total">
                                             <span>Total Deducciones</span>
                                             <span>-{formatCurrency(totalDeducciones)}</span>

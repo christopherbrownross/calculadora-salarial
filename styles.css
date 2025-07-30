@@ -823,6 +823,11 @@ details li {
     font-weight: 600;
 }
 
+.espp-breakdown .value.neutral {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
 .espp-info {
     margin-top: var(--spacing-sm);
     padding: var(--spacing-sm);
