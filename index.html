@@ -206,9 +206,20 @@
             // Estados para ESPP
             const [esppEnabled, setEsppEnabled] = useState(false);
             const [esppPercentage, setEsppPercentage] = useState(15);
+            
+            // Estados para valores manuales (fallback)
+            const [manualStockPrice, setManualStockPrice] = useState('');
+            const [manualExchangeRate, setManualExchangeRate] = useState('');
+            const [useManualValues, setUseManualValues] = useState(false);
+            
+            // Valores efectivos (API o manual)
+            const effectiveStockPrice = useManualValues && manualStockPrice ? 
+                parseFloat(manualStockPrice) : stockPrice;
+            const effectiveExchangeRate = useManualValues && manualExchangeRate ? 
+                parseFloat(manualExchangeRate) : exchangeRate;
 
             // Cálculos automáticos
-            const teamLunchCOP = teamLunchUSD * exchangeRate;
+            const teamLunchCOP = teamLunchUSD * effectiveExchangeRate;
             
             // Aplicar legislación colombiana 2025 para beneficios
             const UVT_2025 = 49800; // Valor UVT 2025
@@ -227,14 +238,14 @@
             const compensacionesTotales = alimentacionGravable + conectividad + deporte + 
                 (medicinaPrepagada - medicinaDeducible) + (seguroVida - seguroDeducible) + teamLunchCOP;
             
-            const rsusMensuales = (accionesTrimestre / 3) * stockPrice * exchangeRate;
+            const rsusMensuales = (accionesTrimestre / 3) * effectiveStockPrice * effectiveExchangeRate;
             
             // Cálculos ESPP (Employee Stock Purchase Plan)
             const esppAhorroMensual = esppEnabled ? (salarioBase * (esppPercentage / 100)) : 0;
             const esppAhorroSemestral = esppAhorroMensual * 6; // Se acumula por 6 meses
-            const esppPrecioConDescuento = stockPrice * 0.85; // 15% de descuento
-            const esppAccionesSemestrales = esppAhorroSemestral / (esppPrecioConDescuento * exchangeRate);
-            const esppBeneficioSemestral = esppAccionesSemestrales * stockPrice * exchangeRate - esppAhorroSemestral;
+            const esppPrecioConDescuento = effectiveStockPrice * 0.85; // 15% de descuento
+            const esppAccionesSemestrales = esppAhorroSemestral / (esppPrecioConDescuento * effectiveExchangeRate);
+            const esppBeneficioSemestral = esppAccionesSemestrales * effectiveStockPrice * effectiveExchangeRate - esppAhorroSemestral;
             const esppBeneficioMensual = esppBeneficioSemestral / 6; // Mensualizado
             const esppBeneficioGravable = esppBeneficioMensual; // El 15% de descuento es gravable
             
@@ -368,16 +379,58 @@
                                         <>
                                             <div className="market-item">
                                                 <span className="label">TWLO</span>
-                                                <span className="value">{formatUSD(stockPrice)}</span>
+                                                <span className="value">{formatUSD(effectiveStockPrice)}</span>
+                                                {useManualValues && <span className="manual-badge">Manual</span>}
                                             </div>
                                             <div className="market-item">
                                                 <span className="label">USD/COP</span>
-                                                <span className="value">${exchangeRate?.toLocaleString('es-CO')}</span>
+                                                <span className="value">${effectiveExchangeRate?.toLocaleString('es-CO')}</span>
+                                                {useManualValues && <span className="manual-badge">Manual</span>}
                                             </div>
                                         </>
                                     )}
                                 </div>
-                                {error && (
+                                <div className="manual-controls">
+                                    <div className="manual-toggle">
+                                        <label className="toggle-label">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={useManualValues}
+                                                onChange={(e) => setUseManualValues(e.target.checked)}
+                                                className="modern-checkbox"
+                                            />
+                                            <span className="checkmark"></span>
+                                            Valores manuales
+                                        </label>
+                                    </div>
+                                    {useManualValues && (
+                                        <div className="manual-inputs">
+                                            <div className="manual-input-group">
+                                                <label>TWLO (USD)</label>
+                                                <input 
+                                                    type="number" 
+                                                    step="0.01"
+                                                    value={manualStockPrice}
+                                                    onChange={(e) => setManualStockPrice(e.target.value)}
+                                                    className="manual-input"
+                                                    placeholder="89.50"
+                                                />
+                                            </div>
+                                            <div className="manual-input-group">
+                                                <label>USD/COP</label>
+                                                <input 
+                                                    type="number" 
+                                                    step="1"
+                                                    value={manualExchangeRate}
+                                                    onChange={(e) => setManualExchangeRate(e.target.value)}
+                                                    className="manual-input"
+                                                    placeholder="4180"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                {error && !useManualValues && (
                                     <div className="error-badge">
                                         <i className="fas fa-exclamation-triangle"></i>
                                         <span>Datos simulados</span>
@@ -512,8 +565,9 @@
                                         </div>
                                         <div className="rsu-info">
                                             <div className="stock-price">
-                                                <span>Precio actual TWLO: ${stockPrice.toFixed(2)} USD</span>
-                                                {error && (
+                                                <span>Precio actual TWLO: ${effectiveStockPrice.toFixed(2)} USD</span>
+                                                {useManualValues && <span className="manual-indicator"> (Manual)</span>}
+                                                {error && !useManualValues && (
                                                     <div className="error-message">
                                                         <small>⚠️ {error}</small>
                                                     </div>

@@ -836,3 +836,90 @@ details li {
     font-size: 0.85rem;
     line-height: 1.4;
 }
+
+/* Estilos para controles manuales */
+.manual-controls {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+}
+
+.manual-toggle {
+    margin-bottom: var(--spacing-sm);
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-primary);
+    user-select: none;
+    font-size: 0.9rem;
+}
+
+.manual-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.manual-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.manual-input-group label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.manual-input {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.manual-input:focus {
+    outline: none;
+    border-color: var(--text-accent);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.1);
+}
+
+.manual-badge {
+    background: var(--accent-gradient);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: var(--spacing-xs);
+}
+
+.manual-indicator {
+    color: var(--text-accent);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Responsive para controles manuales */
+@media (max-width: 768px) {
+    .manual-inputs {
+        grid-template-columns: 1fr;
+    }
+    
+    .manual-controls {
+        margin-top: var(--spacing-xs);
+    }
+}
