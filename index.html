@@ -202,6 +202,10 @@
             const [medicinaPrepagada, setMedicinaPrepagada] = useState(367616);
             const [teamLunchUSD] = useState(25);
             const [accionesTrimestre, setAccionesTrimestre] = useState(111);
+            
+            // Estados para ESPP
+            const [esppEnabled, setEsppEnabled] = useState(false);
+            const [esppPercentage, setEsppPercentage] = useState(15);
 
             // Cálculos automáticos
             const teamLunchCOP = teamLunchUSD * exchangeRate;
@@ -224,6 +228,15 @@
                 (medicinaPrepagada - medicinaDeducible) + (seguroVida - seguroDeducible) + teamLunchCOP;
             
             const rsusMensuales = (accionesTrimestre / 3) * stockPrice * exchangeRate;
+            
+            // Cálculos ESPP (Employee Stock Purchase Plan)
+            const esppAhorroMensual = esppEnabled ? (salarioBase * (esppPercentage / 100)) : 0;
+            const esppAhorroSemestral = esppAhorroMensual * 6; // Se acumula por 6 meses
+            const esppPrecioConDescuento = stockPrice * 0.85; // 15% de descuento
+            const esppAccionesSemestrales = esppAhorroSemestral / (esppPrecioConDescuento * exchangeRate);
+            const esppBeneficioSemestral = esppAccionesSemestrales * stockPrice * exchangeRate - esppAhorroSemestral;
+            const esppBeneficioMensual = esppBeneficioSemestral / 6; // Mensualizado
+            const esppBeneficioGravable = esppBeneficioMensual; // El 15% de descuento es gravable
             
             // Primas y beneficios mensualizados
             const primaMitadAno = salarioBase / 12;
@@ -255,8 +268,8 @@
                 fondoSolidaridad = salarioBase * 0.02;
             }
             
-            // Retención en la fuente
-            const ingresoGravable = totalIngresosMensuales + rsusMensuales;
+            // Retención en la fuente (incluyendo ESPP gravable)
+            const ingresoGravable = totalIngresosMensuales + rsusMensuales + esppBeneficioGravable;
             const limiteDeduccion40Anual = 790 * API_CONFIG.UVT_2025;
             const limiteDeduccion40Mensual = limiteDeduccion40Anual / 12;
             
@@ -284,8 +297,8 @@
                 }
             }
             
-            const totalDeducciones = salud + pension + fondoSolidaridad + retencionFuente + medicinaDeducible + seguroDeducible;
-            const salarioNetoFinal = totalIngresosMensuales + compensacionesTotales + rsusMensuales - totalDeducciones;
+            const totalDeducciones = salud + pension + fondoSolidaridad + retencionFuente + medicinaDeducible + seguroDeducible + esppAhorroMensual;
+            const salarioNetoFinal = totalIngresosMensuales + compensacionesTotales + rsusMensuales + esppBeneficioMensual - totalDeducciones;
 
             const formatNumber = (value) => {
                 return value.toString().replace(/[^\d]/g, '');
@@ -509,6 +522,60 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <div className="glass-card">
+                                    <div className="card-header">
+                                        <i className="fas fa-piggy-bank"></i>
+                                        <h3>ESPP (Employee Stock Purchase Plan)</h3>
+                                    </div>
+                                    <div className="espp-controls">
+                                        <div className="checkbox-group">
+                                            <label className="checkbox-label">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={esppEnabled}
+                                                    onChange={(e) => setEsppEnabled(e.target.checked)}
+                                                    className="modern-checkbox"
+                                                />
+                                                <span className="checkmark"></span>
+                                                Participar en ESPP
+                                            </label>
+                                        </div>
+                                        {esppEnabled && (
+                                            <div className="espp-details">
+                                                <div className="input-group">
+                                                    <label>Porcentaje de ahorro</label>
+                                                    <input 
+                                                        type="range" 
+                                                        min="1" 
+                                                        max="15" 
+                                                        value={esppPercentage}
+                                                        onChange={(e) => setEsppPercentage(Number(e.target.value))}
+                                                        className="modern-slider"
+                                                    />
+                                                    <span className="slider-value">{esppPercentage}%</span>
+                                                </div>
+                                                <div className="espp-breakdown">
+                                                    <div className="detail-item">
+                                                        <span>Ahorro mensual</span>
+                                                        <span className="value">-{formatCurrency(esppAhorroMensual)}</span>
+                                                    </div>
+                                                    <div className="detail-item">
+                                                        <span>Beneficio mensual (15% descuento)</span>
+                                                        <span className="value positive">+{formatCurrency(esppBeneficioMensual)}</span>
+                                                    </div>
+                                                    <div className="detail-item">
+                                                        <span>Acciones semestrales</span>
+                                                        <span className="value">{esppAccionesSemestrales.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="espp-info">
+                                                    <small>💡 El 15% de descuento es gravable y se incluye en el cálculo de retención</small>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </section>
 
                             {/* Panel de resultados */}
@@ -532,9 +599,15 @@
                                             <span>RSUs Mensuales</span>
                                             <span>{formatCurrency(rsusMensuales)}</span>
                                         </div>
+                                        {esppEnabled && (
+                                            <div className="income-item">
+                                                <span>Beneficio ESPP</span>
+                                                <span>{formatCurrency(esppBeneficioMensual)}</span>
+                                            </div>
+                                        )}
                                         <div className="income-item total">
                                             <span>Total Bruto</span>
-                                            <span>{formatCurrency(totalIngresosMensuales + compensacionesTotales + rsusMensuales)}</span>
+                                            <span>{formatCurrency(totalIngresosMensuales + compensacionesTotales + rsusMensuales + esppBeneficioMensual)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -570,6 +643,12 @@
                                             <span>Retención Fuente</span>
                                             <span>-{formatCurrency(retencionFuente)}</span>
                                         </div>
+                                        {esppEnabled && (
+                                            <div className="deduction-item">
+                                                <span>Ahorro ESPP ({esppPercentage}%)</span>
+                                                <span>-{formatCurrency(esppAhorroMensual)}</span>
+                                            </div>
+                                        )}
                                         <div className="deduction-item total">
                                             <span>Total Deducciones</span>
                                             <span>-{formatCurrency(totalDeducciones)}</span>
