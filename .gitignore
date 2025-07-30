@@ -79,3 +79,18 @@ Thumbs.db
 # Build directories
 dist/
 build/
+
+# Archivos personales y documentos privados
+*.pdf
+*comprobante*
+*Comprobante*
+*COMPROBANTE*
+*masivo*
+*Masivo*
+*MASIVO*
+*personal*
+*Personal*
+*PERSONAL*
+*privado*
+*Privado*
+*PRIVADO*
