@@ -17,7 +17,7 @@
     <script type="text/babel">
         const { useState, useEffect, useCallback } = React;
 
-        // Configuración de APIs mejoradas sin CORS
+        // Configuración de APIs usando Yahoo Finance para ambos (misma estructura exitosa)
         const API_CONFIG = {
             STOCK_APIS: [
                 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/TWLO'),
@@ -26,10 +26,11 @@
                 'https://thingproxy.freeboard.io/fetch/https://query1.finance.yahoo.com/v8/finance/chart/TWLO'
             ],
             FOREX_APIS: [
-                'https://api.exchangerate-api.com/v4/latest/USD',
-                'https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.exchangerate.host/latest?base=USD&symbols=COP'),
-                'https://cors-anywhere.herokuapp.com/https://api.exchangerate.host/latest?base=USD&symbols=COP',
-                'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent('https://api.exchangerate.host/latest?base=USD&symbols=COP')
+                // Usando Yahoo Finance para USD/COP (misma estructura que TWLO)
+                'https://api.allorigins.win/get?url=' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/USDCOP=X'),
+                'https://cors-anywhere.herokuapp.com/https://query1.finance.yahoo.com/v8/finance/chart/USDCOP=X',
+                'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/USDCOP=X'),
+                'https://thingproxy.freeboard.io/fetch/https://query1.finance.yahoo.com/v8/finance/chart/USDCOP=X'
             ],
             SMMLV_2025: 1423500,
             UVT_2025: 49800,
@@ -99,28 +100,33 @@
             }, []);
 
             const fetchExchangeRate = useCallback(async () => {
-                // Intentar con múltiples APIs
+                // Intentar con múltiples APIs (misma lógica que TWLO)
                 for (const apiUrl of API_CONFIG.FOREX_APIS) {
                     try {
                         console.log(`Intentando obtener tasa USD/COP desde: ${apiUrl}`);
-                        const response = await fetch(apiUrl);
+                        const response = await fetch(apiUrl, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json',
+                            }
+                        });
                         
                         if (response.ok) {
                             let data = await response.json();
                             let rate = null;
                             
-                            // Si es un proxy, extraer el contenido real
+                            // Si es un proxy, extraer el contenido real (misma lógica que TWLO)
                             if (apiUrl.includes('allorigins.win')) {
                                 data = JSON.parse(data.contents);
                             } else if (apiUrl.includes('codetabs.com')) {
                                 // codetabs devuelve el JSON directamente
                             }
                             
-                            // Parsear según la API
-                            if (apiUrl.includes('exchangerate-api.com')) {
-                                rate = data?.rates?.COP;
-                            } else if (apiUrl.includes('exchangerate.host')) {
-                                rate = data?.rates?.COP;
+                            // Parsear según la estructura de Yahoo Finance (igual que TWLO)
+                            if (data?.chart?.result?.[0]?.meta?.regularMarketPrice) {
+                                rate = data.chart.result[0].meta.regularMarketPrice;
+                            } else if (data?.chart?.result?.[0]?.meta?.previousClose) {
+                                rate = data.chart.result[0].meta.previousClose;
                             }
                             
                             if (rate && rate > 0) {
