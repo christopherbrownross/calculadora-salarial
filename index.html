@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Salario Neto Colombia</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        // Configuración de APIs
+        const API_CONFIG = {
+            STOCK_APIS: [
+                'https://query1.finance.yahoo.com/v8/finance/chart/TWLO',
+                'https://api.polygon.io/v2/aggs/ticker/TWLO/prev?apikey=demo',
+                'https://api.twelvedata.com/price?symbol=TWLO&apikey=demo'
+            ],
+            FOREX_APIS: [
+                'https://api.exchangerate-api.com/v4/latest/USD',
+                'https://api.fixer.io/latest?base=USD&symbols=COP',
+                'https://api.currencyapi.com/v3/latest?apikey=demo&base_currency=USD&currencies=COP'
+            ],
+            SMMLV_2025: 1423500,
+            UVT_2025: 49800,
+            SALUD_PERCENTAGE: 0.04,
+            PENSION_PERCENTAGE: 0.04
+        };
+
+        // Hook mejorado para datos financieros
+        const useFinancialData = () => {
+            const [stockPrice, setStockPrice] = useState(0);
+            const [exchangeRate, setExchangeRate] = useState(0);
+            const [lastUpdate, setLastUpdate] = useState(null);
+            const [isLoading, setIsLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            const fetchStockPrice = useCallback(async () => {
+                // Intentar con múltiples APIs
+                for (const apiUrl of API_CONFIG.STOCK_APIS) {
+                    try {
+                        console.log(`Intentando obtener precio de TWLO desde: ${apiUrl}`);
+                        const response = await fetch(apiUrl, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json',
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            let price = null;
+                            
+                            // Parsear según la API
+                            if (apiUrl.includes('yahoo.com')) {
+                                price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+                            } else if (apiUrl.includes('polygon.io')) {
+                                price = data?.results?.[0]?.c;
+                            } else if (apiUrl.includes('twelvedata.com')) {
+                                price = parseFloat(data?.price);
+                            }
+                            
+                            if (price && price > 0) {
+                                console.log(`Precio obtenido exitosamente: $${price}`);
+                                setStockPrice(price);
+                                setError(null);
+                                return true;
+                            }
+                        }
+                    } catch (error) {
+                        console.log(`Error con API ${apiUrl}:`, error.message);
+                        continue;
+                    }
+                }
+
+                // Fallback con precio simulado más realista
+                console.log('Usando precio simulado para TWLO');
+                const basePrice = 87.25; // Precio base más actualizado
+                const variation = (Math.random() - 0.5) * 3; // Variación de ±$1.5
+                const simulatedPrice = Math.max(basePrice + variation, 70);
+                setStockPrice(simulatedPrice);
+                setError('Usando datos simulados - APIs no disponibles');
+                return false;
+            }, []);
+
+            const fetchExchangeRate = useCallback(async () => {
+                // Intentar con múltiples APIs
+                for (const apiUrl of API_CONFIG.FOREX_APIS) {
+                    try {
+                        console.log(`Intentando obtener tasa USD/COP desde: ${apiUrl}`);
+                        const response = await fetch(apiUrl);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            let rate = null;
+                            
+                            // Parsear según la API
+                            if (apiUrl.includes('exchangerate-api.com')) {
+                                rate = data?.rates?.COP;
+                            } else if (apiUrl.includes('fixer.io')) {
+                                rate = data?.rates?.COP;
+                            } else if (apiUrl.includes('currencyapi.com')) {
+                                rate = data?.data?.COP?.value;
+                            }
+                            
+                            if (rate && rate > 0) {
+                                console.log(`Tasa obtenida exitosamente: ${rate} COP/USD`);
+                                setExchangeRate(rate);
+                                setError(null);
+                                return true;
+                            }
+                        }
+                    } catch (error) {
+                        console.log(`Error con API ${apiUrl}:`, error.message);
+                        continue;
+                    }
+                }
+
+                // Fallback con tasa más realista
+                console.log('Usando tasa de cambio simulada');
+                const baseTasa = 4150; // Tasa base más actualizada
+                const variation = (Math.random() - 0.5) * 50;
+                const simulatedRate = Math.round(baseTasa + variation);
+                setExchangeRate(simulatedRate);
+                setError('Usando datos simulados - APIs no disponibles');
+                return false;
+            }, []);
+
+            const updateData = useCallback(async () => {
+                setIsLoading(true);
+                const [stockSuccess, forexSuccess] = await Promise.all([
+                    fetchStockPrice(),
+                    fetchExchangeRate()
+                ]);
+                
+                if (!stockSuccess || !forexSuccess) {
+                    setError('Usando datos simulados - APIs no disponibles');
+                }
+                
+                setLastUpdate(new Date());
+                setIsLoading(false);
+            }, [fetchStockPrice, fetchExchangeRate]);
+
+            useEffect(() => {
+                updateData();
+                const interval = setInterval(updateData, 60000); // Actualizar cada minuto
+                return () => clearInterval(interval);
+            }, [updateData]);
+
+            return { stockPrice, exchangeRate, lastUpdate, isLoading, error };
+        };
+
+        // Componente principal con diseño moderno
+        const SalaryCalculator = () => {
+            const { stockPrice, exchangeRate, lastUpdate, isLoading, error } = useFinancialData();
+            
+            // Estados para inputs
+            const [salarioBase, setSalarioBase] = useState(14015044);
+            const [mealCard, setMealCard] = useState(938000);
+            const [conectividad, setConectividad] = useState(206710);
+            const [deporte, setDeporte] = useState(275570);
+            const [seguroVida, setSeguroVida] = useState(50454);
+            const [medicinaPrepagada, setMedicinaPrepagada] = useState(367616);
+            const [teamLunchUSD] = useState(25);
+            const [accionesTrimestre, setAccionesTrimestre] = useState(111);
+
+            // Cálculos automáticos
+            const teamLunchCOP = teamLunchUSD * exchangeRate;
+            
+            // Aplicar legislación colombiana 2025 para beneficios
+            const UVT_2025 = 49800; // Valor UVT 2025
+            const maxAlimentacionExenta = 41 * UVT_2025; // $2,041,900
+            const maxMedicinaDeducible = 16 * UVT_2025; // $797,600
+            const maxSeguroDeducible = 16 * UVT_2025; // $797,600
+            const limiteAlimentacion = 310 * UVT_2025; // $15,439,000
+            
+            // Aplicar exenciones según legislación
+            const alimentacionGravable = (salarioBase <= limiteAlimentacion) ? 
+                Math.max(0, mealCard - maxAlimentacionExenta) : mealCard;
+            
+            const medicinaDeducible = Math.min(medicinaPrepagada, maxMedicinaDeducible);
+            const seguroDeducible = Math.min(seguroVida, maxSeguroDeducible);
+            
+            const compensacionesTotales = alimentacionGravable + conectividad + deporte + 
+                (medicinaPrepagada - medicinaDeducible) + (seguroVida - seguroDeducible) + teamLunchCOP;
+            
+            const rsusMensuales = (accionesTrimestre / 3) * stockPrice * exchangeRate;
+            
+            // Primas y beneficios mensualizados
+            const primaMitadAno = salarioBase / 12;
+            const primaFinalAno = salarioBase / 12;
+            const interesesCesantias = (salarioBase * 0.12) / 12;
+            const primaEspecialTwilio = (salarioBase * 12 * 0.10) / 12;
+            
+            const totalIngresosMensuales = salarioBase + primaMitadAno + primaFinalAno + interesesCesantias + primaEspecialTwilio;
+            
+            // Deducciones
+            const salud = salarioBase * API_CONFIG.SALUD_PERCENTAGE;
+            const pension = salarioBase * API_CONFIG.PENSION_PERCENTAGE;
+            
+            // FSP
+            let fondoSolidaridad = 0;
+            const salarioEnSMMLV = salarioBase / API_CONFIG.SMMLV_2025;
+            
+            if (salarioEnSMMLV >= 4 && salarioEnSMMLV < 16) {
+                fondoSolidaridad = salarioBase * 0.01;
+            } else if (salarioEnSMMLV >= 16 && salarioEnSMMLV < 17) {
+                fondoSolidaridad = salarioBase * 0.012;
+            } else if (salarioEnSMMLV >= 17 && salarioEnSMMLV < 18) {
+                fondoSolidaridad = salarioBase * 0.014;
+            } else if (salarioEnSMMLV >= 18 && salarioEnSMMLV < 19) {
+                fondoSolidaridad = salarioBase * 0.016;
+            } else if (salarioEnSMMLV >= 19 && salarioEnSMMLV <= 20) {
+                fondoSolidaridad = salarioBase * 0.018;
+            } else if (salarioEnSMMLV > 20) {
+                fondoSolidaridad = salarioBase * 0.02;
+            }
+            
+            // Retención en la fuente
+            const ingresoGravable = totalIngresosMensuales + rsusMensuales;
+            const limiteDeduccion40Anual = 790 * API_CONFIG.UVT_2025;
+            const limiteDeduccion40Mensual = limiteDeduccion40Anual / 12;
+            
+            const deduccion40Calculada = ingresoGravable * 0.40;
+            const deduccion40Aplicada = Math.min(deduccion40Calculada, limiteDeduccion40Mensual);
+            
+            const baseGravableConDeduccion = ingresoGravable - deduccion40Aplicada;
+            const ingresoGravableAnual = baseGravableConDeduccion * 12;
+            const uvtAnual = ingresoGravableAnual / API_CONFIG.UVT_2025;
+            
+            let retencionFuente = 0;
+            if (uvtAnual > 95) {
+                if (uvtAnual <= 150) {
+                    const exceso = (uvtAnual - 95) * API_CONFIG.UVT_2025;
+                    retencionFuente = (exceso * 0.19) / 12;
+                } else if (uvtAnual <= 360) {
+                    const base = (150 - 95) * API_CONFIG.UVT_2025 * 0.19;
+                    const exceso = (uvtAnual - 150) * API_CONFIG.UVT_2025;
+                    retencionFuente = (base + (exceso * 0.28)) / 12;
+                } else {
+                    const tramo1 = (150 - 95) * API_CONFIG.UVT_2025 * 0.19;
+                    const tramo2 = (360 - 150) * API_CONFIG.UVT_2025 * 0.28;
+                    const exceso = (uvtAnual - 360) * API_CONFIG.UVT_2025;
+                    retencionFuente = (tramo1 + tramo2 + (exceso * 0.33)) / 12;
+                }
+            }
+            
+            const totalDeducciones = salud + pension + fondoSolidaridad + retencionFuente + medicinaDeducible + seguroDeducible;
+            const salarioNetoFinal = totalIngresosMensuales + compensacionesTotales + rsusMensuales - totalDeducciones;
+
+            const formatNumber = (value) => {
+                return value.toString().replace(/[^\d]/g, '');
+            };
+            
+            const formatCurrency = (amount) => {
+                return new Intl.NumberFormat('es-CO', {
+                    style: 'currency',
+                    currency: 'COP',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(amount);
+            };
+
+            const formatUSD = (amount) => {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(amount);
+            };
+
+            return (
+                <div className="app">
+                    {/* Background decorativo */}
+                    <div className="background-decoration">
+                        <div className="gradient-orb orb-1"></div>
+                        <div className="gradient-orb orb-2"></div>
+                        <div className="gradient-orb orb-3"></div>
+                    </div>
+
+                    {/* Header moderno */}
+                    <header className="modern-header">
+                        <div className="header-content">
+                            <div className="header-left">
+                                <div className="logo">
+                                    <i className="fas fa-calculator"></i>
+                                    <span>SalaryCalc</span>
+                                </div>
+                                <div className="header-info">
+                                    <h1>Calculadora de Salario Neto</h1>
+                                    <p>Colombia • RSUs Twilio • Tiempo Real</p>
+                                </div>
+                            </div>
+                            <div className="header-right">
+                                <div className="market-status">
+                                    {isLoading ? (
+                                        <div className="loading-indicator">
+                                            <i className="fas fa-spinner fa-spin"></i>
+                                            <span>Cargando...</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="market-item">
+                                                <span className="label">TWLO</span>
+                                                <span className="value">{formatUSD(stockPrice)}</span>
+                                            </div>
+                                            <div className="market-item">
+                                                <span className="label">USD/COP</span>
+                                                <span className="value">${exchangeRate?.toLocaleString('es-CO')}</span>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                                {error && (
+                                    <div className="error-badge">
+                                        <i className="fas fa-exclamation-triangle"></i>
+                                        <span>Datos simulados</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Contenido principal */}
+                    <main className="main-content">
+                        <div className="dashboard-grid">
+                            {/* Panel de inputs */}
+                            <section className="input-panel">
+                                <div className="glass-card">
+                                    <div className="card-header">
+                                        <i className="fas fa-user-tie"></i>
+                                        <h3>Salario Base</h3>
+                                    </div>
+                                    <div className="input-group">
+                                        <input 
+                                            type="text" 
+                                            value={formatCurrency(salarioBase)} 
+                                            onChange={(e) => setSalarioBase(Number(formatNumber(e.target.value)))}
+                                            className="modern-input"
+                                            placeholder="$14,015,044"
+                                        />
+                                        <span className="input-currency">COP</span>
+                                    </div>
+                                </div>
+
+                                <div className="glass-card">
+                                    <div className="card-header">
+                                        <i className="fas fa-gift"></i>
+                                        <h3>Compensaciones</h3>
+                                    </div>
+                                    <div className="compensation-grid">
+                                        <div className="comp-item">
+                                            <label>Alimentación</label>
+                                            <div className="input-group">
+                                                <input 
+                                                    type="text" 
+                                                    value={formatCurrency(mealCard)} 
+                                                    onChange={(e) => setMealCard(Number(formatNumber(e.target.value)))}
+                                                    className="modern-input"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="comp-item">
+                                            <label>Conectividad</label>
+                                            <div className="input-group">
+                                                <input 
+                                                    type="text" 
+                                                    value={formatCurrency(conectividad)} 
+                                                    onChange={(e) => setConectividad(Number(formatNumber(e.target.value)))}
+                                                    className="modern-input"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="comp-item">
+                                            <label>Deporte</label>
+                                            <div className="input-group">
+                                                <input 
+                                                    type="text" 
+                                                    value={formatCurrency(deporte)} 
+                                                    onChange={(e) => setDeporte(Number(formatNumber(e.target.value)))}
+                                                    className="modern-input"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="comp-item">
+                                            <label>Seguro Vida</label>
+                                            <div className="input-group">
+                                                <input 
+                                                    type="text" 
+                                                    value={formatCurrency(seguroVida)} 
+                                                    onChange={(e) => setSeguroVida(Number(formatNumber(e.target.value)))}
+                                                    className="modern-input"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="comp-item">
+                                            <label>Medicina</label>
+                                            <div className="input-group">
+                                                <input 
+                                                    type="text" 
+                                                    value={formatCurrency(medicinaPrepagada)} 
+                                                    onChange={(e) => setMedicinaPrepagada(Number(formatNumber(e.target.value)))}
+                                                    className="modern-input"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="comp-item">
+                                            <label>Team Lunch</label>
+                                            <div className="input-group readonly">
+                                                <input 
+                                                    type="text" 
+                                                    value={`$${teamLunchUSD} USD`} 
+                                                    readOnly 
+                                                    className="modern-input readonly"
+                                                />
+                                                <small>{formatCurrency(teamLunchCOP)}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="glass-card">
+                                    <div className="card-header">
+                                        <i className="fas fa-chart-line"></i>
+                                        <h3>RSUs Twilio</h3>
+                                    </div>
+                                    <div className="input-group">
+                                        <input 
+                                            type="text" 
+                                            value={accionesTrimestre} 
+                                            onChange={(e) => {
+                                                const value = e.target.value.replace(/[^0-9]/g, '');
+                                                setAccionesTrimestre(Number(value) || 0);
+                                            }}
+                                            className="modern-input no-arrows"
+                                            placeholder="111"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                        />
+                                        <span className="input-currency">acciones/trimestre</span>
+                                    </div>
+                                    <div className="rsu-details">
+                                        <div className="detail-item">
+                                            <span>Valor mensual RSUs</span>
+                                            <span className="value">{formatCurrency(rsusMensuales)}</span>
+                                        </div>
+                                        <div className="rsu-info">
+                                            <div className="stock-price">
+                                                <span>Precio actual TWLO: ${stockPrice.toFixed(2)} USD</span>
+                                                {error && (
+                                                    <div className="error-message">
+                                                        <small>⚠️ {error}</small>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Panel de resultados */}
+                            <section className="results-panel">
+                                {/* Resumen de ingresos */}
+                                <div className="glass-card income-summary">
+                                    <div className="card-header">
+                                        <i className="fas fa-chart-pie"></i>
+                                        <h3>Resumen de Ingresos</h3>
+                                    </div>
+                                    <div className="income-breakdown">
+                                        <div className="income-item">
+                                            <span>Salario + Primas</span>
+                                            <span>{formatCurrency(totalIngresosMensuales)}</span>
+                                        </div>
+                                        <div className="income-item">
+                                            <span>Compensaciones</span>
+                                            <span>{formatCurrency(compensacionesTotales)}</span>
+                                        </div>
+                                        <div className="income-item">
+                                            <span>RSUs Mensuales</span>
+                                            <span>{formatCurrency(rsusMensuales)}</span>
+                                        </div>
+                                        <div className="income-item total">
+                                            <span>Total Bruto</span>
+                                            <span>{formatCurrency(totalIngresosMensuales + compensacionesTotales + rsusMensuales)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Deducciones */}
+                                <div className="glass-card deductions">
+                                    <div className="card-header">
+                                        <i className="fas fa-minus-circle"></i>
+                                        <h3>Deducciones</h3>
+                                    </div>
+                                    <div className="deduction-breakdown">
+                                        <div className="deduction-item">
+                                            <span>Salud (4%)</span>
+                                            <span>-{formatCurrency(salud)}</span>
+                                        </div>
+                                        <div className="deduction-item">
+                                            <span>Pensión (4%)</span>
+                                            <span>-{formatCurrency(pension)}</span>
+                                        </div>
+                                        <div className="deduction-item">
+                                            <span>Fondo Solidaridad</span>
+                                            <span>-{formatCurrency(fondoSolidaridad)}</span>
+                                        </div>
+                                        <div className="deduction-item">
+                                            <span>Medicina Deducible</span>
+                                            <span>-{formatCurrency(medicinaDeducible)}</span>
+                                        </div>
+                                        <div className="deduction-item">
+                                            <span>Seguro Deducible</span>
+                                            <span>-{formatCurrency(seguroDeducible)}</span>
+                                        </div>
+                                        <div className="deduction-item">
+                                            <span>Retención Fuente</span>
+                                            <span>-{formatCurrency(retencionFuente)}</span>
+                                        </div>
+                                        <div className="deduction-item total">
+                                            <span>Total Deducciones</span>
+                                            <span>-{formatCurrency(totalDeducciones)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Resultado final */}
+                                <div className="glass-card final-result">
+                                    <div className="result-content">
+                                        <div className="result-icon">
+                                            <i className="fas fa-wallet"></i>
+                                        </div>
+                                        <div className="result-info">
+                                            <h3>Salario Neto Mensual</h3>
+                                            <div className="final-amount">{formatCurrency(salarioNetoFinal)}</div>
+                                            <p>Después de todas las deducciones</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* Footer con información adicional */}
+                        <footer className="app-footer">
+                            <div className="footer-content">
+                                <div className="update-info">
+                                    {lastUpdate && (
+                                        <span>
+                                            <i className="fas fa-clock"></i>
+                                            Última actualización: {lastUpdate.toLocaleTimeString('es-CO')}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="legal-info">
+                                    <span>Calculadora basada en legislación colombiana 2025</span>
+                                </div>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        // Renderizar la aplicación
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SalaryCalculator />);
+    </script>
+</body>
+</html>
