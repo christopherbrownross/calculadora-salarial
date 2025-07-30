@@ -127,9 +127,10 @@ body {
 
 /* Mejorar el input de RSUs */
 .modern-input.no-arrows {
-    text-align: center;
+    text-align: left;
     font-weight: 600;
     font-size: 1.1rem;
+    padding-left: var(--spacing-md);
 }
 
 /* Estilos para la sección expandible de datos simulados */
@@ -230,21 +231,31 @@ details li {
 .logo {
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
-    font-size: 1.5rem;
-    font-weight: 800;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
     background: var(--accent-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    border-radius: var(--border-radius);
+    box-shadow: var(--glass-shadow);
+    transition: all var(--transition-normal);
 }
 
-.logo i {
-    font-size: 2rem;
-    background: var(--accent-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+.logo:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 40px rgba(0, 242, 254, 0.3);
+}
+
+.calculator-icon {
+    width: 32px;
+    height: 32px;
+    color: #ffffff;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+    transition: all var(--transition-normal);
+}
+
+.logo:hover .calculator-icon {
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 12px rgba(0, 242, 254, 0.4));
 }
 
 .header-info h1 {
