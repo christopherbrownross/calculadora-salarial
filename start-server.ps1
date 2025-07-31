@@ -1,5 +1,5 @@
 # Simple HTTP Server using PowerShell
-$port = 3000
+$port = 8080
 $url = "http://localhost:$port/"
 
 # Create HTTP listener
